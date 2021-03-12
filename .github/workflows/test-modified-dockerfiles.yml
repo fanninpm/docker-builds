@@ -1,0 +1,60 @@
+name: Test Modified Dockerfiles
+on:
+  push:
+    branches:
+    - master
+    paths:
+    - '**/Dockerfile'
+jobs:
+  test-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check which Dockerfiles were modified
+        id: check-modified
+        run: |
+          set -e
+          echo "::set-output name=dockerfiles::$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | xargs)"
+      - name: Check which images need to be built and tested
+        if: ${{ steps.check-modified.outputs.dockerfiles != '' }}
+        id: images-to-build
+        run: |
+          set -e
+          output=$(python3 ./tests/aux/json-lookup.py --raw ${{ steps.check-modified.outputs.dockerfiles }})
+          echo "::set-output name=names::$output"
+      - name: Get versions of images from previous step
+        if: ${{ steps.check-modified.outputs.dockerfiles != '' && steps.images-to-build.outputs.names != '' }}
+        id: versions-of-images
+        run: |
+          set -e
+          with_colons=$(python3 ./tests/aux/json-lookup.py --versions-colon ${{ steps.images-to-build.outputs.names }})
+          with_slashes=$(python3 ./tests/aux/json-lookup.py --versions-slash ${{ steps.images-to-build.outputs.names }})
+          echo "::set-output name=colons::$with_colons"
+          echo "::set-output name=slashes::$with_slashes"
+      - name: Build docker images
+        if: ${{ steps.check-modified.outputs.dockerfiles != '' && steps.images-to-build.outputs.names != '' }}
+        run: |
+          set -e
+          read -ra names <<< "${{ steps.images-to-build.outputs.names }}"
+          read -ra colons <<< "${{ steps.versions-of-images.outputs.colons }}"
+          read -ra slashes <<< "${{ steps.versions-of-images.outputs.slashes }}"
+          for i in {1..${#names[@]}}
+          do
+            docker build -t "${colons[$i]}" "${slashes[i]}"
+          done
+      - name: Get tests
+        if: ${{ steps.check-modified.outputs.dockerfiles != '' && steps.images-to-build.outputs.names != '' }}
+        id: get-tests
+        run: |
+          set -e
+          output=$(python3 ./tests/aux/json-lookup.py --get-test-files ${{ steps.images-to-build.outputs.names }})
+          echo "::set-output name=tests::$output"
+      - name: Run tests
+        if: ${{ steps.check-modified.outputs.dockerfiles != '' && steps.images-to-build.outputs.names != '' && steps.get-tests.outputs.tests != '' }}
+        run: |
+          set -e
+          read -ra run_these <<< "${{ steps.get-tests.outputs.tests }}"
+          for i in "${run_these[@]}"
+          do
+            bash $i
+          done

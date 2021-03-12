@@ -1,0 +1,26 @@
+{
+    "image-versions": {
+        "abricate": "1.0.0",
+        "ariba": "2.14.4",
+        "ivar": "1.2.2_artic20200528",
+        "mash": "2.3",
+        "mashtree": "1.2.0",
+        "metaphlan": "3.0.3-no-db",
+        "quast": "5.0.2",
+        "samtools": "1.11",
+        "shovill": "1.1.0",
+        "spades": "3.15.1"
+    },
+    "tests": {
+        "abricate": "abricate.sh",
+        "ariba": "ariba.sh",
+        "ivar": "ivar.sh",
+        "mash": "mash-test.sh",
+        "mashtree": "mashtree-test.sh",
+        "metaphlan": "metaphlan.sh",
+        "quast": "quast.sh",
+        "samtools": "samtools.sh",
+        "shovill": "shovill.sh",
+        "spades": "spades.sh"
+    }
+}
